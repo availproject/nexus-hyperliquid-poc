@@ -1,12 +1,14 @@
 import { zeroAddress } from "viem";
 import { fetchUnifiedBalances } from "./cache";
 import {
+  asterDexActiveBtnDiv,
   asterDexBalanceWrapDiv,
   asterDexModalDiv,
   asterDexModalWrapDiv,
   asterDexParentContentDiv,
   asterDexTokenDiv,
   asterDexUnifiedBalanceDiv,
+  asterDexWithdrawBtnDiv,
   dropdownNode,
   dropdownParentNode,
   fellixBalanceWrapDiv,
@@ -30,6 +32,8 @@ function hideElement(element: HTMLElement | Element) {
   element.setAttribute("style", "display: none;");
 }
 
+let asterDexObserver: MutationObserver | null;
+let removeDiv = false;
 function injectDomModifier() {
   if (document.getElementById("root") || document.documentElement) {
     const observer = new MutationObserver((mutations) => {
@@ -44,296 +48,369 @@ function injectDomModifier() {
               asterDexModalDiv
             )
           ) {
-            const balanceWrapDiv = document.querySelector(
-              asterDexBalanceWrapDiv
-            );
-            const parentContentDiv = document.querySelector(
-              asterDexParentContentDiv
-            ) as HTMLElement;
-            const modalDiv = document.querySelector(
-              asterDexModalDiv
-            ) as HTMLElement;
-            const unifiedBalanceDiv = balanceWrapDiv!.querySelector(
-              asterDexUnifiedBalanceDiv
-            ) as HTMLElement;
-            const tokenEl = document.querySelector(
-              asterDexTokenDiv
+            const withdrawBtn = document.querySelector(
+              asterDexWithdrawBtnDiv
             ) as HTMLElement | null;
 
-            if (tokenEl) {
-              const observer = new MutationObserver(async () => {
-                const tokenText = tokenEl.innerText?.trim();
-                if (tokenText) {
-                  if (
-                    balanceWrapDiv &&
-                    parentContentDiv &&
-                    modalDiv &&
-                    balanceWrapDiv &&
-                    unifiedBalanceDiv &&
-                    unifiedBalanceDiv.parentNode
-                  ) {
-                    const unifiedBalances = await fetchUnifiedBalances();
+            if (withdrawBtn) {
+              const checkActiveButton = async () => {
+                const activeBtn = withdrawBtn.querySelector(
+                  asterDexActiveBtnDiv
+                ) as HTMLElement | null;
 
-                    const asset = unifiedBalances.find((bal) => {
-                      if (!tokenText.startsWith(bal.symbol)) return false;
+                if (activeBtn) {
+                  const btnText = activeBtn.textContent?.trim();
 
-                      if (bal.symbol === "USDC") {
-                        const has999Chain = bal.breakdown?.some(
-                          (b) => b.chain.id === 999
-                        );
-                        if (has999Chain) return false;
-                      }
+                  if (btnText === "Deposit") {
+                    removeDiv = false;
+                    const tokenEl = document.querySelector(
+                      asterDexTokenDiv
+                    ) as HTMLElement | null;
 
-                      return bal.breakdown?.some((b) => {
-                        if (
-                          b.chain.id === 999 &&
-                          b.contractAddress === zeroAddress
-                        ) {
-                          return false;
-                        }
+                    if (!tokenEl) return;
 
-                        return true;
-                      });
-                    });
+                    const handleTokenChange = async () => {
+                      const tokenText = await tokenEl.innerText?.trim();
 
-                    const assetChain = asset?.breakdown.filter(
-                      (token) => Number(token.balance) > 0
-                    );
-
-                    if (asset && assetChain) {
-                      const balanceWrapperSource =
-                        unifiedBalanceDiv?.parentNode as HTMLElement | null;
-                      if (balanceWrapperSource) {
-                        const sourceButton = balanceWrapperSource.querySelector(
-                          "div.text-right.underline.cursor-pointer"
-                        ) as HTMLElement | null;
-                        if (sourceButton) {
-                          sourceButton.remove();
-                        }
-                      }
-
-                      const text = unifiedBalanceDiv.textContent?.trim() || "";
-                      unifiedBalanceDiv.textContent = text.startsWith("Unified")
-                        ? text
-                        : `Unified ${text}`;
-                      const unifiedBalanceWrapper =
-                        document.createElement("div");
-                      unifiedBalanceWrapper.className = "flex flex-col gap-2";
-                      unifiedBalanceDiv.parentNode.insertBefore(
-                        unifiedBalanceWrapper,
-                        unifiedBalanceDiv
+                      const balanceWrapDiv = document.querySelector(
+                        asterDexBalanceWrapDiv
                       );
-                      unifiedBalanceWrapper.appendChild(unifiedBalanceDiv);
+                      const parentContentDiv = document.querySelector(
+                        asterDexParentContentDiv
+                      ) as HTMLElement;
+                      const modalDiv = document.querySelector(
+                        asterDexModalDiv
+                      ) as HTMLElement;
 
-                      const sourceDiv = document.createElement("div");
-                      sourceDiv.className = `${unifiedBalanceDiv.className} text-right underline cursor-pointer`;
-                      sourceDiv.textContent = "View Sources";
-                      unifiedBalanceWrapper.appendChild(sourceDiv);
+                      const unifiedBalanceDiv = balanceWrapDiv!.querySelector(
+                        asterDexUnifiedBalanceDiv
+                      ) as HTMLElement;
 
-                      sourceDiv.addEventListener("click", () => {
-                        modalDiv.style.display = "none";
+                      if (
+                        tokenText &&
+                        balanceWrapDiv &&
+                        parentContentDiv &&
+                        modalDiv &&
+                        unifiedBalanceDiv &&
+                        unifiedBalanceDiv.parentNode?.parentNode &&
+                        btnText === "Deposit" &&
+                        !removeDiv
+                      ) {
+                        const unifiedBalances = await fetchUnifiedBalances();
 
-                        const sourceParentDiv = document.createElement("div");
-                        sourceParentDiv.className = `${modalDiv.className} p-3 py-4 px-6`;
-                        const sourceHeaderRow = document.createElement("div");
-                        sourceHeaderRow.className =
-                          "flex items-center justify-between mb-4 relative";
+                        const asset = await unifiedBalances.find((bal) => {
+                          if (!tokenText.startsWith(bal.symbol)) return false;
 
-                        const sourceBackDiv = document.createElement("div");
-                        sourceBackDiv.textContent = "←";
-                        sourceBackDiv.className = "cursor-pointer text-white";
-                        sourceHeaderRow.appendChild(sourceBackDiv);
-
-                        sourceBackDiv.addEventListener("click", () => {
-                          sourceParentDiv.remove();
-                          modalDiv.style.display = "block";
-                        });
-
-                        const sourceTitleDiv = document.createElement("div");
-                        sourceTitleDiv.textContent = "My Sources";
-                        sourceTitleDiv.className =
-                          "absolute left-1/2 transform -translate-x-1/2 font-semibold text-white";
-                        sourceHeaderRow.appendChild(sourceTitleDiv);
-
-                        const sourceCrossDiv = document.createElement("div");
-                        sourceCrossDiv.textContent = "X";
-                        sourceCrossDiv.className = "cursor-pointer text-white";
-                        sourceHeaderRow.appendChild(sourceCrossDiv);
-                        const modalWrapDiv = document.querySelector(
-                          asterDexModalWrapDiv
-                        ) as HTMLElement | null;
-                        if (modalWrapDiv) {
-                          sourceCrossDiv.addEventListener("click", () => {
-                            modalWrapDiv.setAttribute("data-state", "closed");
-                            parentContentDiv!.setAttribute(
-                              "data-state",
-                              "closed"
+                          if (bal.symbol === "USDC") {
+                            const has999Chain = bal.breakdown?.some(
+                              (b) => b.chain.id === 999
                             );
+                            if (has999Chain) return false;
+                          }
 
-                            modalWrapDiv.removeAttribute("style");
-                            parentContentDiv.removeAttribute("style");
+                          return bal.breakdown?.some((b) => {
+                            if (
+                              b.chain.id === 999 &&
+                              b.contractAddress === zeroAddress
+                            ) {
+                              return false;
+                            }
 
-                            modalWrapDiv.style.setProperty(
-                              "display",
-                              "none",
-                              "important"
-                            );
-                            parentContentDiv.style.setProperty(
-                              "display",
-                              "none",
-                              "important"
-                            );
-                            modalWrapDiv.style.setProperty(
-                              "pointer-events",
-                              "none",
-                              "important"
-                            );
-                            parentContentDiv.style.setProperty(
-                              "pointer-events",
-                              "none",
-                              "important"
-                            );
-
-                            document
-                              .querySelectorAll<HTMLElement>(
-                                "[aria-hidden], [data-aria-hidden]"
-                              )
-                              .forEach((el) => {
-                                el.removeAttribute("aria-hidden");
-                                el.removeAttribute("data-aria-hidden");
-                              });
-
-                            document
-                              .querySelectorAll<HTMLScriptElement>("script")
-                              .forEach((script) => {
-                                if (
-                                  script.textContent?.includes("aria-hidden") ||
-                                  script.textContent?.includes(
-                                    "data-aria-hidden"
-                                  )
-                                ) {
-                                  script.textContent = script.textContent
-                                    .replace(
-                                      /aria-hidden\s*=\s*["']true["']/g,
-                                      ""
-                                    )
-                                    .replace(
-                                      /data-aria-hidden\s*=\s*["']true["']/g,
-                                      ""
-                                    );
-                                }
-                              });
-                            document
-                              .querySelectorAll<HTMLElement>("*")
-                              .forEach((el) => {
-                                if (el.style.pointerEvents) {
-                                  el.style.removeProperty("pointer-events");
-                                }
-                              });
+                            return true;
                           });
-                        }
-
-                        sourceParentDiv.appendChild(sourceHeaderRow);
-
-                        const sourceTokenWrapDiv =
-                          document.createElement("div");
-                        sourceTokenWrapDiv.className =
-                          "flex justify-between items-center gap-4 mb-4";
-
-                        const sourceLeftDiv = document.createElement("div");
-                        sourceLeftDiv.className = "flex items-center gap-2";
-                        const tokenImg = document.createElement("img");
-                        tokenImg.src = asset?.icon!;
-                        tokenImg.className = "w-10 h-10 object-cover rounded";
-                        const tokenTitle = document.createElement("div");
-
-                        tokenTitle.textContent = `${asset?.symbol}`;
-                        sourceLeftDiv.appendChild(tokenImg);
-                        sourceLeftDiv.appendChild(tokenTitle);
-
-                        const sourceRightDiv = document.createElement("div");
-                        sourceRightDiv.className = "text-right font-medium";
-                        sourceRightDiv.textContent = `${
-                          parseFloat(asset?.balance!).toFixed(4) || 0
-                        } ${asset?.symbol}`;
-
-                        sourceTokenWrapDiv.appendChild(sourceLeftDiv);
-                        sourceTokenWrapDiv.appendChild(sourceRightDiv);
-
-                        sourceParentDiv.appendChild(sourceTokenWrapDiv);
-
-                        const chainCountDiv = document.createElement("div");
-                        chainCountDiv.textContent = `Across ${
-                          assetChain?.length
-                        } ${assetChain?.length > 1 ? "Chains" : "Chain"}`;
-                        chainCountDiv.className =
-                          "text-white mb-4 border-b border-white pb-2";
-                        sourceParentDiv.appendChild(chainCountDiv);
-
-                        const chainWrapDiv = document.createElement("div");
-                        chainWrapDiv.className = "flex flex-col gap-4";
-
-                        assetChain.forEach((item) => {
-                          const chainDiv = document.createElement("div");
-                          chainDiv.className =
-                            "flex justify-between items-center gap-4";
-
-                          const chainLeftDiv = document.createElement("div");
-                          chainLeftDiv.className = "flex items-center gap-2";
-                          const chainImg = document.createElement("img");
-                          chainImg.src = item.chain.logo;
-                          chainImg.className = "w-10 h-10 object-cover rounded";
-                          const leftTitle = document.createElement("div");
-                          leftTitle.textContent = removeMainnet(
-                            item.chain.name
-                          );
-                          chainLeftDiv.appendChild(chainImg);
-                          chainLeftDiv.appendChild(leftTitle);
-
-                          const chainRightDiv = document.createElement("div");
-                          chainRightDiv.className = "text-right font-medium";
-                          chainRightDiv.textContent = `${parseFloat(
-                            item.balance.toString()
-                          ).toFixed(4)} ${asset!.symbol}`;
-
-                          chainDiv.appendChild(chainLeftDiv);
-                          chainDiv.appendChild(chainRightDiv);
-
-                          chainWrapDiv.appendChild(chainDiv);
                         });
 
-                        sourceParentDiv.appendChild(chainWrapDiv);
-                        parentContentDiv.appendChild(sourceParentDiv);
-                      });
-                    } else {
-                      if (unifiedBalanceDiv) {
-                        unifiedBalanceDiv.textContent =
-                          unifiedBalanceDiv.textContent?.replace(
-                            /Unified Balance/,
-                            "Balance"
-                          );
-                      }
+                        const assetChain = await asset?.breakdown.filter(
+                          (token) => Number(token.balance) > 0
+                        );
 
-                      const unifiedBalanceWrapper =
-                        unifiedBalanceDiv?.parentNode as HTMLElement | null;
-                      if (unifiedBalanceWrapper) {
-                        const sourceButton =
-                          unifiedBalanceWrapper.querySelector(
-                            "div.text-right.underline.cursor-pointer"
-                          ) as HTMLElement | null;
-                        if (sourceButton) {
-                          sourceButton.remove();
+                        if (asset && assetChain) {
+                          if (balanceWrapDiv) {
+                            await balanceWrapDiv
+                              ?.querySelectorAll(".custom-unified-btn")
+                              .forEach((btn) => btn.remove());
+                          }
+
+                          const text =
+                            unifiedBalanceDiv.textContent?.trim() || "";
+                          unifiedBalanceDiv.textContent = text.startsWith(
+                            "Unified"
+                          )
+                            ? text
+                            : `Unified ${text}`;
+
+                          const sourceDiv = document.createElement("div");
+                          sourceDiv.className = `custom-unified-btn ${unifiedBalanceDiv.className} text-right underline cursor-pointer`;
+                          sourceDiv.textContent = "View Sources";
+
+                          balanceWrapDiv.appendChild(sourceDiv);
+
+                          sourceDiv.addEventListener("click", () => {
+                            modalDiv.style.display = "none";
+
+                            const sourceParentDiv =
+                              document.createElement("div");
+                            sourceParentDiv.className = `${modalDiv.className} p-3 py-4 px-6`;
+                            const sourceHeaderRow =
+                              document.createElement("div");
+                            sourceHeaderRow.className =
+                              "flex items-center justify-between mb-4 relative";
+
+                            const sourceBackDiv = document.createElement("div");
+                            sourceBackDiv.textContent = "←";
+                            sourceBackDiv.className =
+                              "cursor-pointer text-white";
+                            sourceHeaderRow.appendChild(sourceBackDiv);
+
+                            sourceBackDiv.addEventListener("click", () => {
+                              sourceParentDiv.remove();
+                              modalDiv.style.display = "block";
+                            });
+
+                            const sourceTitleDiv =
+                              document.createElement("div");
+                            sourceTitleDiv.textContent = "My Sources";
+                            sourceTitleDiv.className =
+                              "absolute left-1/2 transform -translate-x-1/2 font-semibold text-white";
+                            sourceHeaderRow.appendChild(sourceTitleDiv);
+
+                            const sourceCrossDiv =
+                              document.createElement("div");
+                            sourceCrossDiv.textContent = "X";
+                            sourceCrossDiv.className =
+                              "cursor-pointer text-white";
+                            sourceHeaderRow.appendChild(sourceCrossDiv);
+                            const modalWrapDiv = document.querySelector(
+                              asterDexModalWrapDiv
+                            ) as HTMLElement | null;
+                            if (modalWrapDiv) {
+                              sourceCrossDiv.addEventListener(
+                                "click",
+                                async () => {
+                                  modalWrapDiv.setAttribute(
+                                    "data-state",
+                                    "closed"
+                                  );
+                                  parentContentDiv!.setAttribute(
+                                    "data-state",
+                                    "closed"
+                                  );
+
+                                  modalWrapDiv.removeAttribute("style");
+                                  parentContentDiv.removeAttribute("style");
+
+                                  modalWrapDiv.style.setProperty(
+                                    "display",
+                                    "none",
+                                    "important"
+                                  );
+                                  parentContentDiv.style.setProperty(
+                                    "display",
+                                    "none",
+                                    "important"
+                                  );
+                                  modalWrapDiv.style.setProperty(
+                                    "pointer-events",
+                                    "none",
+                                    "important"
+                                  );
+                                  parentContentDiv.style.setProperty(
+                                    "pointer-events",
+                                    "none",
+                                    "important"
+                                  );
+
+                                  // await document
+                                  //   .querySelectorAll<HTMLElement>(
+                                  //     "[aria-hidden], [data-aria-hidden]"
+                                  //   )
+                                  //   .forEach((el) => {
+                                  //     el.removeAttribute("aria-hidden");
+                                  //     el.removeAttribute("data-aria-hidden");
+                                  //   });
+
+                                  // await document
+                                  //   .querySelectorAll<HTMLScriptElement>(
+                                  //     "script"
+                                  //   )
+                                  //   .forEach((script) => {
+                                  //     if (
+                                  //       script.textContent?.includes(
+                                  //         "aria-hidden"
+                                  //       ) ||
+                                  //       script.textContent?.includes(
+                                  //         "data-aria-hidden"
+                                  //       )
+                                  //     ) {
+                                  //       script.textContent = script.textContent
+                                  //         .replace(
+                                  //           /aria-hidden\s*=\s*["']true["']/g,
+                                  //           ""
+                                  //         )
+                                  //         .replace(
+                                  //           /data-aria-hidden\s*=\s*["']true["']/g,
+                                  //           ""
+                                  //         );
+                                  //     }
+                                  //   });
+                                  // await document
+                                  //   .querySelectorAll<HTMLElement>("*")
+                                  //   .forEach((el) => {
+                                  //     if (el.style.pointerEvents) {
+                                  //       el.style.removeProperty(
+                                  //         "pointer-events"
+                                  //       );
+                                  //     }
+                                  //   });
+
+                                  if (asterDexObserver) {
+                                    await asterDexObserver.disconnect();
+                                    asterDexObserver = null;
+                                  }
+                                }
+                              );
+                            }
+
+                            sourceParentDiv.appendChild(sourceHeaderRow);
+
+                            const sourceTokenWrapDiv =
+                              document.createElement("div");
+                            sourceTokenWrapDiv.className =
+                              "flex justify-between items-center gap-4 mb-4";
+
+                            const sourceLeftDiv = document.createElement("div");
+                            sourceLeftDiv.className = "flex items-center gap-2";
+                            const tokenImg = document.createElement("img");
+                            tokenImg.src = asset?.icon!;
+                            tokenImg.className =
+                              "w-10 h-10 object-cover rounded";
+                            const tokenTitle = document.createElement("div");
+
+                            tokenTitle.textContent = `${asset?.symbol}`;
+                            sourceLeftDiv.appendChild(tokenImg);
+                            sourceLeftDiv.appendChild(tokenTitle);
+
+                            const sourceRightDiv =
+                              document.createElement("div");
+                            sourceRightDiv.className = "text-right font-medium";
+                            sourceRightDiv.textContent = `${
+                              parseFloat(asset?.balance!).toFixed(4) || 0
+                            } ${asset?.symbol}`;
+
+                            sourceTokenWrapDiv.appendChild(sourceLeftDiv);
+                            sourceTokenWrapDiv.appendChild(sourceRightDiv);
+
+                            sourceParentDiv.appendChild(sourceTokenWrapDiv);
+
+                            const chainCountDiv = document.createElement("div");
+                            chainCountDiv.textContent = `Across ${
+                              assetChain?.length
+                            } ${assetChain?.length > 1 ? "Chains" : "Chain"}`;
+                            chainCountDiv.className =
+                              "text-white mb-4 border-b border-white pb-2";
+                            sourceParentDiv.appendChild(chainCountDiv);
+
+                            const chainWrapDiv = document.createElement("div");
+                            chainWrapDiv.className = "flex flex-col gap-4";
+
+                            assetChain.forEach((item) => {
+                              const chainDiv = document.createElement("div");
+                              chainDiv.className =
+                                "flex justify-between items-center gap-4";
+
+                              const chainLeftDiv =
+                                document.createElement("div");
+                              chainLeftDiv.className =
+                                "flex items-center gap-2";
+                              const chainImg = document.createElement("img");
+                              chainImg.src = item.chain.logo;
+                              chainImg.className =
+                                "w-10 h-10 object-cover rounded";
+                              const leftTitle = document.createElement("div");
+                              leftTitle.textContent = removeMainnet(
+                                item.chain.name
+                              );
+                              chainLeftDiv.appendChild(chainImg);
+                              chainLeftDiv.appendChild(leftTitle);
+
+                              const chainRightDiv =
+                                document.createElement("div");
+                              chainRightDiv.className =
+                                "text-right font-medium";
+                              chainRightDiv.textContent = `${parseFloat(
+                                item.balance.toString()
+                              ).toFixed(4)} ${asset!.symbol}`;
+
+                              chainDiv.appendChild(chainLeftDiv);
+                              chainDiv.appendChild(chainRightDiv);
+
+                              chainWrapDiv.appendChild(chainDiv);
+                            });
+
+                            sourceParentDiv.appendChild(chainWrapDiv);
+                            parentContentDiv.appendChild(sourceParentDiv);
+                          });
+                        } else {
+                          if (unifiedBalanceDiv) {
+                            unifiedBalanceDiv.textContent =
+                              unifiedBalanceDiv.textContent?.replace(
+                                /Unified Balance/,
+                                "Balance"
+                              );
+                          }
+
+                          if (balanceWrapDiv) {
+                            await balanceWrapDiv
+                              ?.querySelectorAll(".custom-unified-btn")
+                              .forEach((btn) => btn.remove());
+                          }
                         }
                       }
+                    };
+
+                    handleTokenChange();
+
+                    if (!asterDexObserver) {
+                      asterDexObserver = new MutationObserver(
+                        handleTokenChange
+                      );
+                    }
+
+                    asterDexObserver.observe(tokenEl, {
+                      characterData: true,
+                      subtree: true,
+                      childList: true,
+                    });
+                  } else if (btnText === "Withdraw") {
+                    removeDiv = true;
+
+                    if (asterDexObserver) {
+                      await asterDexObserver.disconnect();
+                      asterDexObserver = null;
+                    }
+                    const sourceButton = document.querySelector(
+                      "div.text-right.underline.cursor-pointer"
+                    ) as HTMLElement | null;
+
+                    if (sourceButton) {
+                      sourceButton.remove();
                     }
                   }
                 }
+              };
+
+              checkActiveButton();
+
+              const withDrawObserver = new MutationObserver(() => {
+                checkActiveButton();
               });
 
-              observer.observe(tokenEl, {
+              withDrawObserver.observe(withdrawBtn, {
+                childList: true,
                 characterData: true,
                 subtree: true,
-                childList: true,
+                attributes: true,
+                attributeFilter: ["class"],
               });
             }
           }

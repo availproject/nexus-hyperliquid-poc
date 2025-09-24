@@ -76,6 +76,20 @@ export const TOKEN_MAPPING = {
       symbol: "USDT",
       decimals: 6,
     },
+    "0xb88339CB7199b77E23DB6E890353E22632Ba630f": {
+      symbol: "USDC",
+      decimals: 6,
+    },
+  },
+  1514: {
+    "0x54D3d8587907393F069E92D777994CD47A6f931F": {
+      symbol: "USDT",
+      decimals: 6,
+    },
+    "0xF1815bd50389c46847f0Bda824eC8da914045D14": {
+      symbol: "USDC",
+      decimals: 6,
+    },
   },
 } as {
   [chainId: number]: {

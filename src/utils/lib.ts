@@ -58,28 +58,30 @@ export const getChainName = (inputChain: string): string => {
 export const getExplorerBase = (chainId?: number) => {
   switch (chainId) {
     case 1:
-      return "https://etherscan.io";
+      return { url: "https://etherscan.io", name: "Ethereum" };
     case 56:
-      return "https://bscscan.com";
+      return { url: "https://bscscan.com", name: "BNB Smart Chain" };
     case 137:
-      return "https://polygonscan.com";
+      return { url: "https://polygonscan.com", name: "Polygon PoS" };
     case 10:
-      return "https://optimistic.etherscan.io";
+      return { url: "https://optimistic.etherscan.io", name: "Optimism" };
     case 42161:
-      return "https://arbiscan.io";
+      return { url: "https://arbiscan.io", name: "Arbitrum One" };
     case 8453:
-      return "https://basescan.org";
+      return { url: "https://basescan.org", name: "Base" };
     case 43114:
-      return "https://snowscan.xyz";
+      return { url: "https://snowscan.xyz", name: "Avalanche C-Chain" };
     case 534352:
-      return "https://scrollscan.com";
+      return { url: "https://scrollscan.com", name: "Scroll" };
     case 50104:
-      return "https://sophscan.xyz";
+      return { url: "https://sophscan.xyz", name: "Sophon" };
     case 8217:
-      return "https://kaiascan.io";
+      return { url: "https://kaiascan.io", name: "Kaia" };
     case 999:
-      return "https://purrsec.com";
+      return { url: "https://purrsec.com", name: "HyperEVM" };
+    case 1514:
+      return { url: "https://www.storyscan.io", name: "Story" };
     default:
-      return "https://purrsec.com";
+      return { url: "https://purrsec.com", name: "HyperEVM" };
   }
 };

@@ -17,7 +17,9 @@ interface NexusStepsProps {
   totalAllowances: number;
   setIntentStepsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   txURL?: string;
-  chainId?: number;
+  chainId?: React.RefObject<number>;
+  setIntent?: any;
+  setTxURL?: any;
 }
 
 interface HeaderProps {
@@ -99,9 +101,10 @@ const getTextFromStep = (
   totalSources: number,
   explorerURL?: string,
   txURL?: string,
-  chainId?: number
+  chainId?: React.RefObject<number>
 ): StepData | undefined => {
   let varOcg: StepData = { leftText: "Invalid Step", rightText: "" };
+  console.log(chainId?.current, "chainIdsssss");
 
   switch (status) {
     case "ALLOWANCE_ALL_DONE":
@@ -144,14 +147,17 @@ const getTextFromStep = (
       break;
 
     case "INTENT_FULFILLED":
+      const chainName = getExplorerBase(chainId?.current).name;
       varOcg = {
-        leftText: done ? `Received on HyperEVM` : `Receiving on HyperEVM `,
+        leftText: done
+          ? `Received on ${chainName}`
+          : `Receiving on ${chainName}`,
         rightText: done ? `Done` : `Not Supplied`,
       };
       break;
 
     case "SUBMIT_TRANSACTION":
-      const explorerBase = getExplorerBase(chainId);
+      const explorerBase = getExplorerBase(chainId?.current).url;
       varOcg = {
         leftText: txURL ? `Submitted Transaction` : `Submitting Transaction`,
         rightText: txURL ? (
@@ -291,8 +297,12 @@ export const NexusSteps: React.FC<NexusStepsProps> = ({
   setIntentStepsOpen,
   txURL,
   chainId,
+  setIntent,
+  setTxURL,
 }) => {
   const onClose = () => {
+    setIntent(null);
+    setTxURL("");
     setIntentStepsOpen(false);
   };
 
