@@ -12,6 +12,7 @@ import {
   erc20TransferAbi,
   MulticallAbi,
   MulticallAddress,
+  StoryAbi,
 } from "../utils/multicall";
 import { createRoot, Root } from "react-dom/client";
 import { useEffect, useRef, useState } from "react";
@@ -21,7 +22,11 @@ import { LifiAbi } from "../utils/lifi.abi";
 import IntentModal from "../components/intent-modal";
 import AllowanceModal from "../components/allowance-modal";
 import { setCAEvents } from "./caEvents";
-import { formatDecimalAmount, getExplorerBase } from "../utils/lib";
+import {
+  formatDecimalAmount,
+  getExplorerBase,
+  getFirstTokenAddress,
+} from "../utils/lib";
 import {
   EthereumProvider,
   NexusSDK,
@@ -34,7 +39,6 @@ import {
   UserAsset,
 } from "@avail-project/nexus";
 import { publicClient } from "../utils/publicClient";
-import type {} from "@avail-project/nexus";
 import { NexusSteps } from "../components/event-modal";
 import { createPortal } from "react-dom";
 
@@ -72,61 +76,6 @@ window.dispatchEvent(new Event("eip6963:requestProvider"));
 let reactRoot: Root;
 let reactRootElement: Element | null = null;
 
-function render(App: React.FC) {
-  // Create a Shadow DOM host to avoid leaking styles into the dApp and vice-versa
-  let host = document.getElementById("nexus-root-host");
-  if (!host) {
-    host = document.createElement("div");
-    host.id = "nexus-root-host";
-    host.style.position = "fixed";
-    host.style.zIndex = "9999999999";
-    const shadow = host.attachShadow({ mode: "open" });
-    const root = document.createElement("div");
-    root.id = "nexus-root";
-    shadow.appendChild(root);
-    document.body.appendChild(host);
-    reactRootElement = root;
-  }
-
-  if (!reactRoot) {
-    if (!reactRootElement) {
-      const shadow = (host as any).shadowRoot as ShadowRoot | null;
-      reactRootElement = shadow?.getElementById("nexus-root") || null;
-    }
-    reactRoot = createRoot(reactRootElement!);
-  }
-
-  fixAppModal();
-
-  try {
-    debugInfo("RENDERING APP");
-    reactRoot.render(<App />);
-  } catch (e) {
-    debugInfo("ERROR RENDERING APP", e);
-  }
-}
-
-function fixAppModal() {
-  document
-    .querySelector(".sc-bBABsx.fAsTrb:has(.sc-fLcnxK.iOdKba.modal)")
-    ?.setAttribute("style", "z-index: 40");
-  document
-    .querySelector(".sc-bBABsx.jWjRYk:has(.modal)")
-    ?.setAttribute("style", "z-index: 40");
-}
-
-function ShadowPortal({ children }: { children: any }) {
-  const host = document.getElementById("nexus-root-host");
-  const shadow = host?.shadowRoot as ShadowRoot | null;
-  const container = shadow?.getElementById("nexus-root") || null;
-
-  if (!container || !container.isConnected) {
-    console.warn("⚠️ ShadowPortal target missing — skipping render");
-    return null;
-  }
-  return createPortal(children!, container!);
-}
-
 type Step = {
   typeID: string;
   type: string;
@@ -134,12 +83,10 @@ type Step = {
   data?: any;
 };
 
-function NexusApp() {
-  const ca = new NexusSDK();
+const NexusApp = () => {
+  const ca = new NexusSDK({ network: "devnet" });
   const [intent, setIntent] = useState<OnIntentHookData | null>(null);
-
   const [allowance, setAllowance] = useState<OnAllowanceHookData | null>(null);
-
   const [steps, setSteps] = useState<Step[]>([]);
   const [currentSource, setCurrentSource] = useState(0);
   const [totalSources, setTotalSources] = useState(0);
@@ -150,9 +97,7 @@ function NexusApp() {
   const [txURL, setTxURL] = useState<string>("");
   const [error, setError] = useState<boolean>(false);
   const chainIdRef = useRef(1);
-
   const unifiedBalancesRef = useRef<UserAsset[] | null>(null);
-
   const requiredAmountRef = useRef<string | null>(null);
 
   ca.setOnIntentHook(({ intent, allow, deny, refresh }) => {
@@ -216,7 +161,7 @@ function NexusApp() {
           break;
 
         case "ALLOWANCE_USER_APPROVAL":
-          setTitle(`Setting up allowances on ${data.data.chainName}`);
+          setTitle(`Setting up allowances on ${chainN}`);
           break;
 
         case "ALLOWANCE_APPROVAL_MINED":
@@ -278,7 +223,6 @@ function NexusApp() {
     } | null = null;
 
     const initializeCA = async () => {
-      // Find the first provider with an active connection
       for (const provider of providers) {
         debugInfo(`=== Checking provider: ${provider.info.name} ===`);
 
@@ -338,6 +282,11 @@ function NexusApp() {
                 method: "wallet_switchEthereumChain",
                 params: [{ chainId: "0x3e7" }],
               });
+            } else if (window.origin === "https://app.storyhunt.xyz") {
+              await provider.provider.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId: "0x5ea" }],
+              });
             }
             setCAEvents(ca);
             fetchUnifiedBalances().then((balances) => {
@@ -354,7 +303,6 @@ function NexusApp() {
             debugInfo("Posting message for active provider:", message);
             // Add delay to ensure content script is ready
             setTimeout(() => window.postMessage(message, "*"), 100);
-
             break; // Stop looking once we find an active provider
           }
         } catch (error) {
@@ -383,14 +331,10 @@ function NexusApp() {
 
     initializeCA();
 
-    // Set up event listeners for all providers, but only update if it's the active one
     for (const provider of providers) {
       provider.provider.on("accountsChanged", async (event) => {
-        // debugInfo("ON ACCOUNT CHANGED", event, provider.info.name);
         if (event.length) {
           const address = event[0] || provider.provider.selectedAddress;
-          // Re-initialize CA with the new active provider
-          // ca.setEVMProvider(provider.provider);
 
           await provider.provider.request({
             method: "wallet_switchEthereumChain",
@@ -407,6 +351,11 @@ function NexusApp() {
                 method: "wallet_switchEthereumChain",
                 params: [{ chainId: "0x3e7" }],
               });
+            } else if (window.origin === "https://app.storyhunt.xyz") {
+              await provider.provider.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId: "0x5ea" }],
+              });
             }
             setCAEvents(ca);
             fetchUnifiedBalances().then((balances) => {
@@ -422,21 +371,16 @@ function NexusApp() {
                 },
                 "*"
               );
-              console.log(
-                "Account changed - updated active provider:",
-                provider.info.name,
-                address
-              );
-            } catch {}
+            } catch (error) {
+              console.log("err in account change:", error);
+            }
           });
         } else {
-          // Check if this was the active provider that got disconnected
           if (
             activeProvider &&
             activeProvider.info.name === provider.info.name
           ) {
             ca.deinit();
-
             clearCache();
             activeProvider = null;
             try {
@@ -449,59 +393,15 @@ function NexusApp() {
                 },
                 "*"
               );
-            } catch {}
+            } catch (error) {
+              console.log("err in second block account change:", error);
+            }
           }
         }
       });
 
-      // provider.provider.on("connect", async (event) => {
-      //   debugInfo("ON CONNECT", event, provider.info.name);
-
-      //   let address = provider.provider.selectedAddress;
-      //   if (!address) {
-      //     try {
-      //       const accounts = (await provider.provider.request?.({
-      //         method: "eth_accounts",
-      //       })) as string[] | undefined;
-      //       address = accounts?.[0] || undefined;
-      //     } catch {}
-      //   }
-
-      //   if (address) {
-      //     // Update active provider
-      //     activeProvider = {
-      //       info: provider.info,
-      //       provider: provider.provider,
-      //       address,
-      //     };
-      //     ca.setEVMProvider(provider.provider);
-      //     ca.init().then(() => {
-      //       window.nexus = ca;
-      //       setCAEvents(ca);
-      //       fetchUnifiedBalances();
-      //       try {
-      //         window.postMessage(
-      //           {
-      //             type: "NEXUS_PROVIDER_UPDATE",
-      //             providerName: provider.info.name,
-      //             walletAddress: address,
-      //             providerIcon: provider.info.icon ?? null,
-      //           },
-      //           "*"
-      //         );
-      //         console.log(
-      //           "Connect event - new active provider:",
-      //           provider.info.name,
-      //           address
-      //         );
-      //       } catch {}
-      //     });
-      //   }
-      // });
-
       // Set up request interceptor for this provider
       const originalRequest = provider.provider.request;
-      debugInfo("Adding Request Interceptor", provider);
       provider.provider.request = async function (...args) {
         debugInfo("Intercepted in useEffect", ...args);
 
@@ -509,6 +409,109 @@ function NexusApp() {
           method: string;
           params?: any[];
         };
+
+        if (
+          method === "eth_sendTransaction" &&
+          params?.[0] &&
+          params[0].data.toLowerCase().startsWith("0xac9650d8")
+        ) {
+          const unifiedBalances = await fetchUnifiedBalances();
+          unifiedBalancesRef.current = unifiedBalances;
+
+          const decodedData = decodeFunctionData({
+            abi: StoryAbi,
+            data: params[0].data,
+          });
+
+          if (decodedData?.functionName === "multicall") {
+            const newDecodedArgs = decodedData?.args as any;
+            const secondDecodedData = decodeFunctionData({
+              abi: StoryAbi,
+              data: newDecodedArgs[0][0],
+            });
+
+            if (secondDecodedData) {
+              const newSecondDecodedArgs = secondDecodedData?.args as any;
+              const thirdDecodedData = decodeFunctionData({
+                abi: StoryAbi,
+                data: newSecondDecodedArgs[0][0],
+              });
+
+              console.log(thirdDecodedData, "thirdDecodedData");
+
+              const newThirdDecodedArgs = thirdDecodedData?.args as any;
+
+              const paramAmount = newThirdDecodedArgs[0]?.amountIn?.toString();
+              const tokenAddress =
+                newThirdDecodedArgs?.functionName === "exactInput"
+                  ? getFirstTokenAddress(
+                      String(newThirdDecodedArgs[0]?.path)
+                    )?.toLowerCase()
+                  : newThirdDecodedArgs[0]?.tokenIn?.toLowerCase();
+
+              const tokenIndex = unifiedBalances.findIndex((bal) =>
+                bal.breakdown.find(
+                  (token) =>
+                    token.contractAddress.toLowerCase() ===
+                    tokenAddress.toLowerCase()
+                )
+              );
+
+              if (tokenIndex === -1) {
+                return originalRequest.apply(this, args);
+              }
+
+              const actualToken = unifiedBalances[tokenIndex].breakdown.find(
+                (token) =>
+                  token.contractAddress.toLowerCase() ===
+                  tokenAddress.toLowerCase()
+              );
+
+              if (
+                new Decimal(actualToken?.balance || "0")
+                  .mul(Decimal.pow(10, actualToken?.decimals || 0))
+                  .lessThan(paramAmount)
+              ) {
+                const requiredAmount = new Decimal(paramAmount)
+                  .minus(
+                    Decimal.mul(
+                      actualToken?.balance || "0",
+                      Decimal.pow(10, actualToken?.decimals || 0)
+                    )
+                  )
+                  .div(Decimal.pow(10, actualToken?.decimals || 0))
+                  .toFixed();
+
+                requiredAmountRef.current = formatDecimalAmount(requiredAmount);
+                const chainIdHex = await window.ethereum.request({
+                  method: "eth_chainId",
+                });
+                const chainId = parseInt(String(chainIdHex), 16);
+                chainIdRef.current = chainId;
+                const handler = await ca.bridge({
+                  amount: requiredAmount,
+                  token: TOKEN_MAPPING[chainId][tokenAddress.toLowerCase()]
+                    .symbol as SUPPORTED_TOKENS,
+                  chainId: chainId as SUPPORTED_CHAINS_IDS,
+                });
+                console.log("BRIDGE Response", handler);
+                if (!handler.success) {
+                  const errorMessage = {
+                    code: 4001,
+                    message: "User rejected the request.",
+                    details: "User denied intent.",
+                    version: "viem@2.33.3",
+                  };
+                  setError(true);
+                  throw errorMessage;
+                }
+                const hashResponse = await originalRequest.apply(this, args);
+                setTxURL(hashResponse as string);
+                return hashResponse;
+              }
+            }
+          }
+        }
 
         if (
           method === "eth_sendTransaction" &&
@@ -556,7 +559,7 @@ function NexusApp() {
               .toFixed();
 
             requiredAmountRef.current = formatDecimalAmount(requiredAmount);
-            const chainIdHex = await window.nexus.request({
+            const chainIdHex = await window.ethereum.request({
               method: "eth_chainId",
             });
             const chainId = parseInt(String(chainIdHex), 16);
@@ -639,7 +642,7 @@ function NexusApp() {
               .toFixed();
 
             requiredAmountRef.current = formatDecimalAmount(requiredAmount);
-            const chainIdHex = await window.nexus.request({
+            const chainIdHex = await window.ethereum.request({
               method: "eth_chainId",
             });
             const chainId = parseInt(String(chainIdHex), 16);
@@ -720,7 +723,7 @@ function NexusApp() {
               .toFixed();
 
             requiredAmountRef.current = formatDecimalAmount(requiredAmount);
-            const chainIdHex = await window.nexus.request({
+            const chainIdHex = await window.ethereum.request({
               method: "eth_chainId",
             });
             const chainId = parseInt(String(chainIdHex), 16);
@@ -804,7 +807,7 @@ function NexusApp() {
               .div(Decimal.pow(10, actualToken?.decimals || 0))
               .toFixed();
             requiredAmountRef.current = formatDecimalAmount(requiredAmount);
-            const chainIdHex = await window.nexus.request({
+            const chainIdHex = await window.ethereum.request({
               method: "eth_chainId",
             });
             const chainId = parseInt(String(chainIdHex), 16);
@@ -905,8 +908,8 @@ function NexusApp() {
         if (
           method === "eth_sendTransaction" &&
           params?.[0] &&
-          (params[0].data.toLowerCase().startsWith("0xa9059cbb") || // ERC20 transfer
-            params[0].data.toLowerCase().startsWith("0x23b872dd")) // ERC20 transferFrom
+          (params[0].data.toLowerCase().startsWith("0xa9059cbb") ||
+            params[0].data.toLowerCase().startsWith("0x23b872dd"))
         ) {
           const unifiedBalances = await fetchUnifiedBalances();
           unifiedBalancesRef.current = unifiedBalances;
@@ -937,10 +940,6 @@ function NexusApp() {
             .div(Decimal.pow(10, actualToken?.decimals || 0))
             .toFixed();
 
-          debugInfo("amount decoded:", amount);
-          debugInfo("actual contract:", decodedData.args![0]);
-          debugInfo("actual transaction:", args[0]);
-
           if (
             new Decimal(actualToken?.balance || "0")
               .mul(Decimal.pow(10, actualToken?.decimals || 0))
@@ -967,12 +966,16 @@ function NexusApp() {
               .div(Decimal.pow(10, actualToken?.decimals || 0))
               .toFixed();
             requiredAmountRef.current = formatDecimalAmount(requiredAmount);
+            const chainIdHex = await window.nexus.request({
+              method: "eth_chainId",
+            });
+            const chainId = parseInt(String(chainIdHex), 16);
+            chainIdRef.current = chainId;
             const handler = await ca.bridge({
               amount: requiredAmount,
-              token: TOKEN_MAPPING[42161][
-                tokenAddress.toLowerCase()
-              ].symbol.toLowerCase() as SUPPORTED_TOKENS,
-              chainId: 42161,
+              token: TOKEN_MAPPING[chainId][tokenAddress.toLowerCase()]
+                .symbol as SUPPORTED_TOKENS,
+              chainId: chainId as SUPPORTED_CHAINS_IDS,
             });
             const res = handler;
             debugInfo("BRIDGE Response", res);
@@ -991,11 +994,7 @@ function NexusApp() {
             abi: LifiAbi,
             data: params[0].data,
           });
-          debugInfo(
-            "LIFI DECODED",
-            decodedData.args[5].fromAmount,
-            decodedData.args[5].sendingAssetId
-          );
+
           const paramAmount = decodedData.args[5].fromAmount.toString();
           const tokenAddress = decodedData.args[5].sendingAssetId.toLowerCase();
 
@@ -1026,12 +1025,16 @@ function NexusApp() {
               .div(Decimal.pow(10, actualToken?.decimals || 0))
               .toFixed();
             requiredAmountRef.current = formatDecimalAmount(requiredAmount);
+            const chainIdHex = await window.nexus.request({
+              method: "eth_chainId",
+            });
+            const chainId = parseInt(String(chainIdHex), 16);
+            chainIdRef.current = chainId;
             const handler = await ca.bridge({
               amount: requiredAmount,
-              token: TOKEN_MAPPING[42161][
-                tokenAddress.toLowerCase()
-              ].symbol.toLowerCase() as SUPPORTED_TOKENS,
-              chainId: 42161,
+              token: TOKEN_MAPPING[chainId][tokenAddress.toLowerCase()]
+                .symbol as SUPPORTED_TOKENS,
+              chainId: chainId as SUPPORTED_CHAINS_IDS,
             });
             const res = handler;
             debugInfo("BRIDGE Response", res);
@@ -1129,7 +1132,6 @@ function NexusApp() {
       };
     }
 
-    console.log(chainIdRef.current, "chainN");
     const onStepComplete = (data: any) => {
       handleStepComplete(data, chainIdRef.current);
     };
@@ -1139,7 +1141,7 @@ function NexusApp() {
 
     return () => {
       ca.nexusEvents.off("expected_steps", handleExpectedSteps);
-      ca.nexusEvents.off("step_complete", handleStepComplete);
+      ca.nexusEvents.off("step_complete", onStepComplete);
     };
   }, []);
 
@@ -1190,11 +1192,68 @@ function NexusApp() {
       </ShadowPortal>
     </>
   );
-}
+};
 
-function NexusProviderApp() {
+const NexusProviderApp = () => {
   return <NexusApp />;
-}
+};
+
+const render = (App: React.FC) => {
+  let host = document.getElementById("nexus-root-host");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "nexus-root-host";
+    host.style.position = "fixed";
+    host.style.zIndex = "9999999999";
+    const shadow = host.attachShadow({ mode: "open" });
+    const root = document.createElement("div");
+    root.id = "nexus-root";
+    shadow.appendChild(root);
+    document.body.appendChild(host);
+    reactRootElement = root;
+  }
+
+  if (!reactRoot) {
+    if (!reactRootElement) {
+      const shadow = (host as any).shadowRoot as ShadowRoot | null;
+      reactRootElement = shadow?.getElementById("nexus-root") || null;
+    }
+    reactRoot = createRoot(reactRootElement!);
+  }
+
+  if (window.origin === "https://app.hyperliquid.xyz") {
+    fixAppModal();
+  }
+
+  try {
+    debugInfo("RENDERING APP");
+    reactRoot.render(<App />);
+  } catch (e) {
+    debugInfo("ERROR RENDERING APP", e);
+  }
+};
+
+const fixAppModal = () => {
+  document
+    .querySelector(".sc-bBABsx.fAsTrb:has(.sc-fLcnxK.iOdKba.modal)")
+    ?.setAttribute("style", "z-index: 40");
+  document
+    .querySelector(".sc-bBABsx.jWjRYk:has(.modal)")
+    ?.setAttribute("style", "z-index: 40");
+};
+
+const ShadowPortal = ({ children }: { children: any }) => {
+  const host = document.getElementById("nexus-root-host");
+  const shadow = host?.shadowRoot as ShadowRoot | null;
+  const container = shadow?.getElementById("nexus-root") || null;
+
+  if (!container || !container.isConnected) {
+    console.log("⚠️ ShadowPortal target missing — skipping render");
+    return null;
+  }
+  return createPortal(children!, container!);
+};
+
 render(NexusProviderApp);
 
 const observer = new MutationObserver(() => {
@@ -1206,4 +1265,5 @@ const observer = new MutationObserver(() => {
     }
   }
 });
+
 observer.observe(document.body, { childList: true, subtree: true });

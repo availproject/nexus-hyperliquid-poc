@@ -152,7 +152,7 @@ function ExpandableRow({
             style={{
               background: "none",
               border: "none",
-              color: "rgb(80, 210, 193)",
+              color: "rgba(3, 55, 255, .8)",
               fontSize: 12,
               fontWeight: 500,
               cursor: "pointer",

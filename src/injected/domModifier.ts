@@ -34,10 +34,217 @@ function hideElement(element: HTMLElement | Element) {
 
 let asterDexObserver: MutationObserver | null;
 let removeDiv = false;
+
+let updateDiv = false;
+
 function injectDomModifier() {
   if (document.getElementById("root") || document.documentElement) {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach(async (mutation) => {
+        if (mutation.target instanceof HTMLElement) {
+          const mainEl = mutation.target.querySelector("main.h-full.w-full");
+
+          // if (mainEl) {
+          //   const wrappers = mutation.target.querySelectorAll(
+          //     'div.flex.full-w.justify-between.items-center[class*="bg-[#323232]"]'
+          //   );
+
+          //   wrappers.forEach((rowWrapper) => {
+          //     const tokenBtn = rowWrapper.querySelector<HTMLButtonElement>(
+          //       'button[data-test-id="token-select-btn"]'
+          //     );
+          //     if (!tokenBtn) return;
+
+          //     const container = rowWrapper.closest(
+          //       'div.w-full.flex.flex-col[class*="bg-[#F9F9F929]"]'
+          //     );
+          //     if (!container) return;
+
+          //     const balanceP = container.querySelector<HTMLParagraphElement>(
+          //       "div.flex.gap-2.items-center p"
+          //     );
+          //     if (!balanceP) return;
+
+          //     let currentTokenSymbol = "";
+
+          //     const getTokenSymbol = () =>
+          //       Array.from(tokenBtn.childNodes)
+          //         .filter((n) => n.nodeType === Node.TEXT_NODE)
+          //         .map((n) => n.textContent?.trim())
+          //         .join("") || "";
+
+          //     const updateBalance = () => {
+          //       const tokenSymbol = getTokenSymbol();
+          //       console.log(balanceP.textContent, "balanceP.textContent");
+
+          //       const match = balanceP.textContent?.match(/([-+]?\d*\.?\d+)/);
+          //       const numberPart = match ? match[0] : "0";
+
+          //       if (Number(numberPart) === 0) return;
+
+          //       const expectedText =
+          //         tokenSymbol === "USDC.e"
+          //           ? `Unified Balance: ${numberPart}`
+          //           : `Balance: ${numberPart}`;
+
+          //       if (balanceP.textContent !== expectedText) {
+          //         balanceP.textContent = expectedText;
+          //       }
+          //     };
+
+          //     // 🔹 Observe balance changes
+          //     const observerBalance = new MutationObserver(() => {
+          //       updateBalance();
+          //     });
+
+          //     observerBalance.observe(balanceP, {
+          //       childList: true,
+          //       characterData: true,
+          //       subtree: true,
+          //     });
+
+          //     // 🔹 Observe token changes
+          //     const observerToken = new MutationObserver(() => {
+          //       const newSymbol = getTokenSymbol();
+          //       if (newSymbol !== currentTokenSymbol) {
+          //         currentTokenSymbol = newSymbol;
+          //         updateBalance();
+          //       }
+          //     });
+
+          //     observerToken.observe(tokenBtn, {
+          //       childList: true,
+          //       characterData: true,
+          //       subtree: true,
+          //     });
+
+          //     // Run once at start
+          //     currentTokenSymbol = getTokenSymbol();
+          //     updateBalance();
+          //   });
+          // }
+
+          // // __define-ocg__
+          // let varOcg = "balance-observer";
+
+          // if (mainEl) {
+          //   const wrappers = document.querySelectorAll(
+          //     "div.flex.justify-between.items-center"
+          //   );
+
+          //   wrappers.forEach((rowWrapper) => {
+          //     const tokenBtn = rowWrapper.querySelector(
+          //       'button[data-test-id="token-select-btn"]'
+          //     );
+          //     const container = rowWrapper.closest("div.w-full.flex.flex-col");
+          //     const balanceP = container?.querySelector(
+          //       "div.flex.gap-2.items-center p"
+          //     );
+
+          //     if (!tokenBtn || !balanceP) return;
+
+          //     let currentTokenSymbol = "USDC.e";
+          //     let previousNumberPart = "";
+          //     let initialized = false;
+          //     let lastUpdateLock = 0;
+
+          //     const getTokenSymbol = () =>
+          //       Array.from(tokenBtn.childNodes)
+          //         .filter((n) => n.nodeType === Node.TEXT_NODE)
+          //         .map((n) => n.textContent?.trim())
+          //         .join("") || "";
+
+          //     const updateBalance = () => {
+          //       const tokenSymbol = getTokenSymbol();
+          //       const textNow = balanceP.textContent?.trim() || "";
+          //       const match = textNow
+          //         .replace(/,/g, "")
+          //         .match(/([-+]?\d*\.?\d+)/);
+          //       const numberPart = match ? match[0] : "0";
+
+          //       if (previousNumberPart !== numberPart) {
+          //         console.log(
+          //           previousNumberPart || 0,
+          //           numberPart || 0,
+          //           textNow,
+          //           "vvvvvvv"
+          //         );
+          //       }
+          //       if (tokenSymbol !== currentTokenSymbol) {
+          //         // 🔄 Token switch
+          //         console.log(
+          //           "🔁 Token switched:",
+          //           currentTokenSymbol,
+          //           "→",
+          //           tokenSymbol
+          //         );
+          //         initialized = false;
+          //         previousNumberPart = "";
+          //         currentTokenSymbol = tokenSymbol;
+          //         return;
+          //       }
+
+          //       if (
+          //         !initialized &&
+          //         (!/\d/.test(numberPart) || Number(numberPart) === 0)
+          //       ) {
+          //         console.log("⏳ Waiting for valid balance...");
+          //         return;
+          //       }
+
+          //       if (!initialized) {
+          //         initialized = true;
+          //         console.log("✅ Initialized with", tokenSymbol, numberPart);
+          //       }
+
+          //       const expectedText =
+          //         tokenSymbol === "USDC.e"
+          //           ? `Unified Balance: ${numberPart}`
+          //           : `Balance: ${numberPart}`;
+
+          //       // 🧱 Skip if our own recent update is still "locked"
+          //       const now = Date.now();
+          //       if (now - lastUpdateLock < 400) return; // 400 ms lock window
+
+          //       if (balanceP.textContent?.trim() !== expectedText.trim()) {
+          //         // Schedule update slightly after React’s commit phase
+          //         setTimeout(() => {
+          //           console.log("🔹 Force-updating:", expectedText);
+          //           balanceP.textContent = expectedText;
+          //           lastUpdateLock = Date.now(); // lock against re-render revert
+          //           previousNumberPart = numberPart;
+          //         }, 120);
+          //       }
+          //     };
+
+          //     // Observe balance changes
+          //     const observerBalance = new MutationObserver(() => {
+          //       requestAnimationFrame(() => updateBalance());
+          //     });
+
+          //     observerBalance.observe(balanceP.parentElement || balanceP, {
+          //       childList: true,
+          //       characterData: true,
+          //       subtree: true,
+          //     });
+
+          //     // Observe token changes
+          //     const observerToken = new MutationObserver(() => {
+          //       requestAnimationFrame(() => updateBalance());
+          //     });
+
+          //     observerToken.observe(tokenBtn, {
+          //       childList: true,
+          //       characterData: true,
+          //       subtree: true,
+          //     });
+
+          //     // 🕓 Keep polling until the first non-zero balance appears
+          //     setInterval(updateBalance, 1000);
+          //   });
+          // }
+        }
+
         if (
           mutation.type === "childList" &&
           mutation.addedNodes.length > 0 &&
@@ -351,13 +558,13 @@ function injectDomModifier() {
                             parentContentDiv.appendChild(sourceParentDiv);
                           });
                         } else {
-                          if (unifiedBalanceDiv) {
-                            unifiedBalanceDiv.textContent =
-                              unifiedBalanceDiv.textContent?.replace(
-                                /Unified Balance/,
-                                "Balance"
-                              );
-                          }
+                          // if (unifiedBalanceDiv) {
+                          //   unifiedBalanceDiv.textContent =
+                          //     unifiedBalanceDiv.textContent?.replace(
+                          //       /Unified Balance/,
+                          //       "Balance"
+                          //     );
+                          // }
 
                           if (balanceWrapDiv) {
                             await balanceWrapDiv
@@ -452,84 +659,84 @@ function injectDomModifier() {
                 if (balanceWrapDiv && balanceWrapDiv.textContent) {
                   const el = balanceWrapDiv as HTMLElement;
 
-                  let text = (el.textContent || "").trim();
-                  text = text.replace(/^(?:Unified\s*)+Balance/, "Balance");
-                  text = text.replace(/\bBalance\b/, "Unified Balance");
-                  if (text === "Balance") text = "Unified Balance";
-                  if (el.textContent !== text) el.textContent = text;
+                  // let text = (el.textContent || "").trim();
+                  // text = text.replace(/^(?:Unified\s*)+Balance/, "Balance");
+                  // text = text.replace(/\bBalance\b/, "Unified Balance");
+                  // if (text === "Balance") text = "Unified Balance";
+                  // if (el.textContent !== text) el.textContent = text;
 
-                  if (!el.dataset.unifiedObserverAttached) {
-                    el.dataset.unifiedObserverAttached = "1";
-                    const nodeObserver = new MutationObserver((mutations) => {
-                      const cur = (el.textContent || "").trim();
-                      const desired = cur
-                        .replace(/^(?:Unified\s*)+Balance/, "Balance")
-                        .replace(/\bBalance\b/, "Unified Balance");
-                      const final =
-                        desired === "Balance" ? "Unified Balance" : desired;
-                      if (cur !== final) {
-                        el.textContent = final;
-                      }
-                    });
-                    nodeObserver.observe(el, {
-                      characterData: true,
-                      childList: true,
-                      subtree: true,
-                    });
+                  // if (!el.dataset.unifiedObserverAttached) {
+                  //   el.dataset.unifiedObserverAttached = "1";
+                  //   const nodeObserver = new MutationObserver((mutations) => {
+                  //     const cur = (el.textContent || "").trim();
+                  //     const desired = cur
+                  //       .replace(/^(?:Unified\s*)+Balance/, "Balance")
+                  //       .replace(/\bBalance\b/, "Unified Balance");
+                  //     const final =
+                  //       desired === "Balance" ? "Unified Balance" : desired;
+                  //     if (cur !== final) {
+                  //       el.textContent = final;
+                  //     }
+                  //   });
+                  //   nodeObserver.observe(el, {
+                  //     characterData: true,
+                  //     childList: true,
+                  //     subtree: true,
+                  //   });
 
-                    (el as any).__unifiedNodeObserver = nodeObserver;
-                  }
+                  //   (el as any).__unifiedNodeObserver = nodeObserver;
+                  // }
 
                   const parent = (el.parentElement ||
                     el.parentNode) as HTMLElement | null;
-                  if (parent && !parent.dataset.unifiedParentObserver) {
-                    parent.dataset.unifiedParentObserver = "1";
+                  // if (parent && !parent.dataset.unifiedParentObserver) {
+                  //   parent.dataset.unifiedParentObserver = "1";
 
-                    const parentObserver = new MutationObserver((mutations) => {
-                      for (const m of mutations) {
-                        if (m.type === "childList") {
-                          const candidate = parent.querySelector(
-                            ".flex.items-center.gap-1"
-                          ) as HTMLElement | null;
-                          if (!candidate) continue;
+                  //   const parentObserver = new MutationObserver((mutations) => {
+                  //     for (const m of mutations) {
+                  //       if (m.type === "childList") {
+                  //         const candidate = parent.querySelector(
+                  //           ".flex.items-center.gap-1"
+                  //         ) as HTMLElement | null;
+                  //         if (!candidate) continue;
 
-                          const cur = (candidate.textContent || "").trim();
-                          const desired = cur
-                            .replace(/^(?:Unified\s*)+Balance/, "Balance")
-                            .replace(/\bBalance\b/, "Unified Balance");
-                          const final =
-                            desired === "Balance" ? "Unified Balance" : desired;
-                          if (candidate.textContent !== final)
-                            candidate.textContent = final;
+                  //         const cur = (candidate.textContent || "").trim();
+                  //         const desired = cur
+                  //           .replace(/^(?:Unified\s*)+Balance/, "Balance")
+                  //           .replace(/\bBalance\b/, "Unified Balance");
+                  //         const final =
+                  //           desired === "Balance" ? "Unified Balance" : desired;
+                  //         if (candidate.textContent !== final)
+                  //           candidate.textContent = final;
 
-                          if (!candidate.dataset.unifiedObserverAttached) {
-                            candidate.dataset.unifiedObserverAttached = "1";
-                            const obs = new MutationObserver(() => {
-                              const c = (candidate.textContent || "").trim();
-                              const d = c
-                                .replace(/^(?:Unified\s*)+Balance/, "Balance")
-                                .replace(/\bBalance\b/, "Unified Balance");
-                              const f = d === "Balance" ? "Unified Balance" : d;
-                              if (candidate.textContent !== f)
-                                candidate.textContent = f;
-                            });
-                            obs.observe(candidate, {
-                              characterData: true,
-                              childList: true,
-                              subtree: true,
-                            });
-                            (candidate as any).__unifiedNodeObserver = obs;
-                          }
-                        }
-                      }
-                    });
+                  //         if (!candidate.dataset.unifiedObserverAttached) {
+                  //           candidate.dataset.unifiedObserverAttached = "1";
+                  //           const obs = new MutationObserver(() => {
+                  //             const c = (candidate.textContent || "").trim();
+                  //             const d = c
+                  //               .replace(/^(?:Unified\s*)+Balance/, "Balance")
+                  //               .replace(/\bBalance\b/, "Unified Balance");
+                  //             const f = d === "Balance" ? "Unified Balance" : d;
+                  //             if (candidate.textContent !== f)
+                  //               candidate.textContent = f;
+                  //           });
+                  //           obs.observe(candidate, {
+                  //             characterData: true,
+                  //             childList: true,
+                  //             subtree: true,
+                  //           });
+                  //           (candidate as any).__unifiedNodeObserver = obs;
+                  //         }
+                  //       }
+                  //     }
+                  //   });
 
-                    parentObserver.observe(parent, {
-                      childList: true,
-                      subtree: true,
-                    });
-                    (parent as any).__unifiedParentObserver = parentObserver;
-                  }
+                  //   parentObserver.observe(parent, {
+                  //     childList: true,
+                  //     subtree: true,
+                  //   });
+                  //   (parent as any).__unifiedParentObserver = parentObserver;
+                  // }
                 }
 
                 const currentSymbols = (assetChain || [])
@@ -753,11 +960,11 @@ function injectDomModifier() {
               );
 
               if (asset && assetChain) {
-                unifiedBalanceDiv.textContent =
-                  unifiedBalanceDiv.textContent?.replace(
-                    "Available",
-                    "Unified Balance"
-                  );
+                // unifiedBalanceDiv.textContent =
+                //   unifiedBalanceDiv.textContent?.replace(
+                //     "Available",
+                //     "Unified Balance"
+                //   );
                 const unifiedBalanceWrapper = document.createElement("div");
                 unifiedBalanceWrapper.className = "flex flex-col gap-2";
                 unifiedBalanceDiv.parentNode.insertBefore(
@@ -1002,19 +1209,23 @@ function injectDomModifier() {
       });
     });
 
-    if (document.getElementById("root")) {
-      observer.observe(document.getElementById("root")!, {
-        subtree: true,
-        childList: true,
-        characterData: true,
-      });
-    } else {
-      observer.observe(document.body, {
-        subtree: true,
-        childList: true,
-        characterData: true,
-      });
-    }
+    // if (document.getElementById("root")) {
+    //   observer.observe(document.getElementById("root")!, {
+    //     subtree: true,
+    //     childList: true,
+    //     characterData: true,
+    //     attributes: true,
+    //     attributeFilter: ["class"],
+    //   });
+    // } else {
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    // }
   }
 }
 

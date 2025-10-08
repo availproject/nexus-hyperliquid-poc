@@ -53,7 +53,8 @@ const modalStyle: React.CSSProperties = {
   color: "#e5e7eb",
   padding: "24px",
   position: "relative",
-  background: "rgb(15, 26, 31)",
+  background: "rgb(0 0 0 / 80%)",
+  boxShadow: "rgba(0, 0, 0, 0.7) 0px 0px 22px 0px",
   border: "1px solid rgb(39, 48, 53)",
   borderRadius: 16,
   overflow: "auto",
@@ -69,7 +70,7 @@ const modalStyle: React.CSSProperties = {
 };
 
 const sectionStyle: React.CSSProperties = {
-  background: "rgb(15, 26, 31)",
+  background: "rgb(0 0 0 / 80%)",
   width: "100%",
   padding: 0,
   fontFamily:
@@ -99,15 +100,16 @@ const btnBase: React.CSSProperties = {
 
 const btnStylePrimary: React.CSSProperties = {
   ...btnBase,
-  color: "rgb(4, 6, 12)",
-  backgroundColor: "rgb(80, 210, 193)",
+  backgroundColor: "rgba(3, 55, 255, .8)",
+  boxShadow: "0 0 12px 0 #3556d5",
+  color: "#fff",
 };
 
 const btnStyleMuted: React.CSSProperties = {
   ...btnBase,
-  background: "#2a2f3a",
-  color: "#e5e7eb",
-  borderColor: "#3b424f",
+  background: "#939393",
+  boxShadow: "0 0 8px 0 hsla(0, 0%, 100%, .8)",
+  color: "#323232",
 };
 
 const FeesSection = ({
@@ -603,7 +605,7 @@ export default function IntentModal({
     const intervalId = setInterval(async () => {
       try {
         setIsRefreshing(true);
-        const refreshedIntent = await intentModal.refresh();
+        const refreshedIntent = await intentModal.refresh([]);
         // Update the intent in the modal state
         setIntentModal({
           ...intentModal,

@@ -85,3 +85,28 @@ export const getExplorerBase = (chainId?: number) => {
       return { url: "https://purrsec.com", name: "HyperEVM" };
   }
 };
+
+export function decodePath(path: string): string[] {
+  const cleanPath = path.startsWith("0x") ? path.slice(2) : path;
+  const addresses: string[] = [];
+
+  let i = 0;
+  while (i + 40 <= cleanPath.length) {
+    // take 20-byte (40 hex chars) as address
+    const addr = "0x" + cleanPath.slice(i, i + 40);
+    addresses.push(addr.toLowerCase());
+    i += 40;
+
+    // skip 3-byte fee (6 hex chars) if more path exists
+    if (i + 6 < cleanPath.length) {
+      i += 6;
+    }
+  }
+
+  return addresses;
+}
+
+export function getFirstTokenAddress(path: string): string {
+  const hex = path.startsWith("0x") ? path.slice(2) : path;
+  return "0x" + hex.slice(0, 40); // first 20 bytes
+}

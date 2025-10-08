@@ -8,6 +8,7 @@ const DEFAULT_MAPPING: Record<string, string> = {
   "usefelix.xyz": `Lets get you the funds on HyperEVM to initiate the deposit.`,
   "liminal.money": `Lets get you the funds to initiate the deposit.`,
   "asterdex.com": `Lets get you the funds to initiate the deposit.`,
+  "app.storyhunt.xyz": `Lets get you the funds to initiate the swap.`,
 };
 
 type HostTextProps = {

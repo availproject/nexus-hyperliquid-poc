@@ -16,7 +16,7 @@ import { fetchUnifiedBalances } from "./cache";
 import { publicClient } from "../utils/publicClient";
 
 function fakeEstimateGasOrigins(origin: string) {
-  const origins = ["app.hyperlend.finance"];
+  const origins = ["app.hyperlend.finance", "app.storyhunt.xyz"];
   return origins.find((o) => origin.includes(o));
 }
 
@@ -31,6 +31,10 @@ function injectNetworkInterceptor() {
   window.decodeFunctionResult = decodeFunctionResult;
 
   window.fetch = async function (...args) {
+    if (args[0].toString() === "") {
+      return originalFetch.apply(this, args);
+    }
+
     const response = await originalFetch.apply(this, args);
 
     if (args[1] && args[1].body) {
@@ -96,13 +100,6 @@ function injectNetworkInterceptor() {
                     if (decodedParam.functionName !== "balanceOf") return;
 
                     const index = unifiedBalances.findIndex((bal) => {
-                      if (bal.symbol === "USDC") {
-                        const has999Chain = bal.breakdown.some(
-                          (asset) => asset.chain.id === 999
-                        );
-                        if (has999Chain) return false;
-                      }
-
                       return bal.breakdown.some(
                         (asset) =>
                           asset.contractAddress.toLowerCase() ===
@@ -168,13 +165,6 @@ function injectNetworkInterceptor() {
                 });
 
                 const index = unifiedBalancess.findIndex((bal) => {
-                  if (bal.symbol === "USDC") {
-                    const has999Chain = bal.breakdown.some(
-                      (asset) => asset.chain.id === 999
-                    );
-                    if (has999Chain) return false;
-                  }
-
                   return bal.breakdown.some(
                     (asset) =>
                       asset.contractAddress.toLowerCase() ===
@@ -228,16 +218,10 @@ function injectNetworkInterceptor() {
           } else if (item.method === "eth_getBalance" && item.params?.[0]) {
             const unifiedBalances = await fetchUnifiedBalances();
 
-            const chainId = 999;
-            const chainIdInNum = new Decimal(chainId).toNumber();
-            const asset = unifiedBalances.find(
-              (asset) =>
-                asset.symbol !== "USDC" &&
-                asset.breakdown.find(
-                  (b) =>
-                    b.chain.id === chainIdInNum &&
-                    b.contractAddress === zeroAddress
-                )
+            const asset = unifiedBalances.find((asset) =>
+              asset.breakdown.find(
+                (b) => b.chain.id === 999 && b.contractAddress === zeroAddress
+              )
             );
 
             if (asset) {
@@ -261,7 +245,8 @@ function injectNetworkInterceptor() {
         payload.method === "eth_estimateGas" &&
         payload.params?.[0] &&
         (payload.params[0].data.toLowerCase().startsWith("0xe28c8be3") ||
-          payload.params[0].data.toLowerCase().startsWith("0xf24f0847"))
+          payload.params[0].data.toLowerCase().startsWith("0xf24f0847") ||
+          payload.params[0].data.toLowerCase().startsWith("0xac9650d8"))
       ) {
         if (fakeEstimateGasOrigins(window.origin)) {
           return createResponse({
@@ -286,13 +271,6 @@ function injectNetworkInterceptor() {
 
         if (decodedParam.functionName === "balanceOf") {
           const index = unifiedBalances.findIndex((bal) => {
-            if (bal.symbol === "USDC") {
-              const has999Chain = bal.breakdown.some(
-                (asset) => asset.chain.id === 999
-              );
-              if (has999Chain) return false;
-            }
-
             return bal.breakdown.some(
               (asset) => asset.contractAddress.toLowerCase() === token
             );
@@ -325,7 +303,7 @@ function injectNetworkInterceptor() {
 
       if (payload.method === "eth_getBalance" && payload.params?.[0]) {
         const unifiedBalances = await fetchUnifiedBalances();
-        const chainIdHex = await window.nexus.request({
+        const chainIdHex = await window.ethereum.request({
           method: "eth_chainId",
         });
         const chainId = parseInt(String(chainIdHex), 16);
@@ -432,13 +410,6 @@ function injectNetworkInterceptor() {
                 }
 
                 const index = unifiedBalances.findIndex((bal) => {
-                  if (bal.symbol === "USDC") {
-                    const has999Chain = bal.breakdown.some(
-                      (asset) => asset.chain.id === 999
-                    );
-                    if (has999Chain) return false;
-                  }
-
                   return bal.breakdown.some(
                     (asset) =>
                       asset.contractAddress.toLowerCase() ===

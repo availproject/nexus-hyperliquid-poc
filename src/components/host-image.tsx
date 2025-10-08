@@ -2,6 +2,7 @@ import React from "react";
 import hypurrFiLogo from "../assets/logo/hypurrFi.svg";
 import liminalLogo from "../assets/logo/liminal.svg";
 import asterDexLogo from "../assets/logo/asterDex.svg";
+import storyHuntLogo from "../assets/logo/storyHunt.svg";
 
 const DEFAULT_MAPPING: Record<string, string> = {
   "app.hypurr.fi": hypurrFiLogo,
@@ -10,6 +11,7 @@ const DEFAULT_MAPPING: Record<string, string> = {
   "usefelix.xyz": `Felix`,
   "liminal.money": liminalLogo,
   "asterdex.com": asterDexLogo,
+  "app.storyhunt.xyz": storyHuntLogo,
 };
 
 const STYLE_MAPPING: Record<string, React.CSSProperties> = {
@@ -36,6 +38,13 @@ const STYLE_MAPPING: Record<string, React.CSSProperties> = {
   },
   "asterdex.com": {
     height: 34,
+    width: 130,
+    marginLeft: -50,
+    marginRight: -35,
+    marginTop: 10,
+  },
+  "app.storyhunt.xyz": {
+    height: 46,
     width: 130,
     marginLeft: -50,
     marginRight: -35,

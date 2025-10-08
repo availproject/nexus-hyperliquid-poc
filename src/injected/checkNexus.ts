@@ -1,6 +1,6 @@
 import { NexusSDK } from "@avail-project/nexus";
 
-export async function hasNexusInit() {
+export const hasNexusInit = async () => {
   if (!window.nexus?.getUnifiedBalances) {
     let isNexusInit = false;
     while (!isNexusInit) {
@@ -11,4 +11,4 @@ export async function hasNexusInit() {
     }
   }
   return true;
-}
+};
