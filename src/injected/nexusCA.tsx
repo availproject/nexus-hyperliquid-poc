@@ -21,7 +21,7 @@ import { LifiAbi } from "../utils/lifi.abi";
 import IntentModal from "../components/intent-modal";
 import AllowanceModal from "../components/allowance-modal";
 import { setCAEvents } from "./caEvents";
-import { formatDecimalAmount } from "../utils/lib";
+import { formatDecimalAmount, getExplorerBase } from "../utils/lib";
 import {
   EthereumProvider,
   NexusSDK,
@@ -115,10 +115,16 @@ function fixAppModal() {
     ?.setAttribute("style", "z-index: 40");
 }
 
-function ShadowPortal({ children }: { children: React.ReactNode }) {
-  // Make sure reactRootElement is the shadow-root container
-  if (!reactRootElement) return null;
-  return createPortal(children, reactRootElement!);
+function ShadowPortal({ children }: { children: any }) {
+  const host = document.getElementById("nexus-root-host");
+  const shadow = host?.shadowRoot as ShadowRoot | null;
+  const container = shadow?.getElementById("nexus-root") || null;
+
+  if (!container || !container.isConnected) {
+    console.warn("⚠️ ShadowPortal target missing — skipping render");
+    return null;
+  }
+  return createPortal(children!, container!);
 }
 
 type Step = {
@@ -143,7 +149,7 @@ function NexusApp() {
   const [intentStepsOpen, setIntentStepsOpen] = useState<boolean>(false);
   const [txURL, setTxURL] = useState<string>("");
   const [error, setError] = useState<boolean>(false);
-  const [chainId, setChainId] = useState<number>(1);
+  const chainIdRef = useRef(1);
 
   const unifiedBalancesRef = useRef<UserAsset[] | null>(null);
 
@@ -200,8 +206,10 @@ function NexusApp() {
     }
   };
 
-  const handleStepComplete = (data: any) => {
+  const handleStepComplete = (data: any, chainId: number) => {
     try {
+      const chainN = getExplorerBase(chainId).name;
+
       switch (data.type) {
         case "ALLOWANCE_ALL_DONE":
           setTitle("Allowances setup done");
@@ -228,7 +236,7 @@ function NexusApp() {
           break;
 
         case "INTENT_COLLECTION_COMPLETE":
-          setTitle(`Receiving on HyperEVM`);
+          setTitle(`Receiving on ${chainN ?? "HyperEVM"}`);
           break;
 
         case "INTENT_FULFILLED":
@@ -552,7 +560,7 @@ function NexusApp() {
               method: "eth_chainId",
             });
             const chainId = parseInt(String(chainIdHex), 16);
-            setChainId(chainId);
+            chainIdRef.current = chainId;
             const handler = await ca.bridge({
               amount: requiredAmount,
               token: TOKEN_MAPPING[chainId][tokenAddress]
@@ -635,7 +643,7 @@ function NexusApp() {
               method: "eth_chainId",
             });
             const chainId = parseInt(String(chainIdHex), 16);
-            setChainId(chainId);
+            chainIdRef.current = chainId;
             const handler = await ca.bridge({
               amount: requiredAmount,
               token: TOKEN_MAPPING[chainId][tokenAddress]
@@ -716,7 +724,7 @@ function NexusApp() {
               method: "eth_chainId",
             });
             const chainId = parseInt(String(chainIdHex), 16);
-            setChainId(chainId);
+            chainIdRef.current = chainId;
             const handler = await ca.bridge({
               amount: requiredAmount,
               token: TOKEN_MAPPING[chainId][
@@ -800,7 +808,7 @@ function NexusApp() {
               method: "eth_chainId",
             });
             const chainId = parseInt(String(chainIdHex), 16);
-            setChainId(chainId);
+            chainIdRef.current = chainId;
             const handler = await ca.bridge({
               amount: requiredAmount,
               token: TOKEN_MAPPING[chainId][tokenAddress.toLowerCase()]
@@ -871,7 +879,7 @@ function NexusApp() {
                   method: "eth_chainId",
                 });
                 const chainId = parseInt(String(chainIdHex), 16);
-                setChainId(chainId);
+                chainIdRef.current = chainId;
                 const handler = await ca.bridge({
                   amount: requiredAmount,
                   token: TOKEN_MAPPING[chainId][tokenAddress.toLowerCase()]
@@ -1121,8 +1129,14 @@ function NexusApp() {
       };
     }
 
+    console.log(chainIdRef.current, "chainN");
+    const onStepComplete = (data: any) => {
+      handleStepComplete(data, chainIdRef.current);
+    };
+
     ca.nexusEvents.on("expected_steps", handleExpectedSteps);
-    ca.nexusEvents.on("step_complete", handleStepComplete);
+    ca.nexusEvents.on("step_complete", onStepComplete);
+
     return () => {
       ca.nexusEvents.off("expected_steps", handleExpectedSteps);
       ca.nexusEvents.off("step_complete", handleStepComplete);
@@ -1139,8 +1153,8 @@ function NexusApp() {
 
   return (
     <>
-      {intent && (
-        <ShadowPortal>
+      <ShadowPortal>
+        {intent && (
           <IntentModal
             intentModal={intent}
             setIntentModal={setIntent}
@@ -1148,19 +1162,17 @@ function NexusApp() {
             unifiedBalances={unifiedBalancesRef.current}
             setIntentStepsOpen={setIntentStepsOpen}
           />
-        </ShadowPortal>
-      )}
-      {allowance && (
-        <ShadowPortal>
+        )}
+
+        {allowance && (
           <AllowanceModal
             allowance={allowance}
             setAllowance={setAllowance}
             setIntentStepsOpen={setIntentStepsOpen}
           />
-        </ShadowPortal>
-      )}
-      {intentStepsOpen && !intent && !allowance && (
-        <ShadowPortal>
+        )}
+
+        {intentStepsOpen && !intent && !allowance && (
           <NexusSteps
             steps={steps}
             title={title}
@@ -1170,10 +1182,12 @@ function NexusApp() {
             totalAllowances={totalAllowances}
             setIntentStepsOpen={setIntentStepsOpen}
             txURL={txURL}
-            chainId={chainId}
+            chainId={chainIdRef}
+            setIntent={setIntent}
+            setTxURL={setTxURL}
           />
-        </ShadowPortal>
-      )}
+        )}
+      </ShadowPortal>
     </>
   );
 }
@@ -1186,7 +1200,10 @@ render(NexusProviderApp);
 const observer = new MutationObserver(() => {
   const host = document.getElementById("nexus-root-host");
   if (!host) {
-    render(NexusProviderApp);
+    if (reactRoot) {
+      reactRoot.unmount();
+      render(NexusProviderApp);
+    }
   }
 });
 observer.observe(document.body, { childList: true, subtree: true });

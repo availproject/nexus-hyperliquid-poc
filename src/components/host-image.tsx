@@ -1,6 +1,7 @@
 import React from "react";
 import hypurrFiLogo from "../assets/logo/hypurrFi.svg";
 import liminalLogo from "../assets/logo/liminal.svg";
+import asterDexLogo from "../assets/logo/asterDex.svg";
 
 const DEFAULT_MAPPING: Record<string, string> = {
   "app.hypurr.fi": hypurrFiLogo,
@@ -8,7 +9,7 @@ const DEFAULT_MAPPING: Record<string, string> = {
   "app.hyperlend.finance": "HyperLend",
   "usefelix.xyz": `Felix`,
   "liminal.money": liminalLogo,
-  "asterdex.com": "ASTER",
+  "asterdex.com": asterDexLogo,
 };
 
 const STYLE_MAPPING: Record<string, React.CSSProperties> = {
@@ -27,17 +28,18 @@ const STYLE_MAPPING: Record<string, React.CSSProperties> = {
     marginTop: "12px",
   },
   "liminal.money": {
-    height: 34,
+    height: 48,
     width: 130,
     marginLeft: -50,
     marginRight: -35,
     marginTop: 10,
   },
   "asterdex.com": {
-    color: "#FFF",
-    fontSize: "1.5rem",
-    marginLeft: "-22px",
-    marginTop: "12px",
+    height: 34,
+    width: 130,
+    marginLeft: -50,
+    marginRight: -35,
+    marginTop: 10,
   },
 };
 

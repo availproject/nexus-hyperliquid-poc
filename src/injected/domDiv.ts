@@ -27,3 +27,6 @@ export const asterDexUnifiedBalanceDiv =
 export const asterDexTokenDiv =
   "div.flex.items-center.justify-between.cursor-pointer.bg-interactive-interactiveBg.pl-0.pr-3.py-0 .text-t-primary.text-body1.leading-5";
 export const asterDexModalWrapDiv = `[data-state="open"]`;
+export const asterDexWithdrawBtnDiv =
+  "div.flex.flex-row.items-center.px-4.sm\\:px-6";
+export const asterDexActiveBtnDiv = ".text-t-primary";

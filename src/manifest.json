@@ -28,8 +28,8 @@
         "https://app.hyperlend.finance/*",
         "https://liminal.money/*",
         "https://www.usefelix.xyz/*",
-        "https://www.prjx.com/*",
-        "https://www.asterdex.com/*"
+        "https://www.asterdex.com/*",
+        "https://app.storyhunt.xyz/*"
       ],
       "run_at": "document_start"
     }
@@ -50,8 +50,8 @@
         "https://app.hyperlend.finance/*",
         "https://liminal.money/*",
         "https://www.usefelix.xyz/*",
-        "https://www.prjx.com/*",
-        "https://www.asterdex.com/*"
+        "https://www.asterdex.com/*",
+        "https://app.storyhunt.xyz/*"
       ]
     }
   ],
