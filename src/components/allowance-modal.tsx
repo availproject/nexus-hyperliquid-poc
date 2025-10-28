@@ -39,7 +39,7 @@ const modal: React.CSSProperties = {
   color: "#e5e7eb",
   padding: "24px",
   position: "relative",
-  background: "rgb(0 0 0 / 80%)",
+  background: "rgb(30 38 43)",
   boxShadow: "rgba(0, 0, 0, 0.7) 0px 0px 22px 0px",
   border: "1px solid rgb(39, 48, 53)",
   borderRadius: 16,

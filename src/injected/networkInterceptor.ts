@@ -20,6 +20,100 @@ function fakeEstimateGasOrigins(origin: string) {
   return origins.find((o) => origin.includes(o));
 }
 
+function updateTokenBalances(responseData: any, unifiedBalances: any[]) {
+  const updatedResponse: any = {};
+
+  for (const chainKey in responseData) {
+    const chainData = responseData[chainKey];
+    updatedResponse[chainKey] = {};
+
+    // First, update existing tokens in the response
+    for (const addressKey in chainData) {
+      const tokenInfo = chainData[addressKey];
+      const address = tokenInfo?.contractAddress;
+      if (!address) continue;
+
+      const varOcg = unifiedBalances.findIndex(
+        (bal: any) =>
+          Array.isArray(bal.breakdown) &&
+          bal.breakdown.some(
+            (asset: any) =>
+              String(asset.contractAddress || "").toLowerCase() ===
+              String(address).toLowerCase()
+          )
+      );
+
+      let updatedTokenBalance = tokenInfo.tokenBalance;
+      let updatedtotalUsdValue = tokenInfo.totalUsdValue;
+
+      if (varOcg !== -1) {
+        const asset = unifiedBalances[varOcg];
+        const actualAsset = asset.breakdown?.find(
+          (acAsset: any) =>
+            String(acAsset.contractAddress || "").toLowerCase() ===
+            String(address).toLowerCase()
+        );
+
+        if (asset && actualAsset) {
+          try {
+            updatedTokenBalance = new Decimal(asset.balance || 0)
+              .mul(
+                Decimal.pow(10, actualAsset?.decimals ?? asset.decimals ?? 18)
+              )
+              .floor()
+              .toFixed();
+            updatedtotalUsdValue = new Decimal(asset.balance || 0)
+              .mul(tokenInfo?.price || 0)
+              .toNumber();
+          } catch (err) {
+            console.error(`Error computing balance for ${address}:`, err);
+          }
+        }
+      }
+
+      updatedResponse[chainKey][addressKey] = {
+        ...tokenInfo,
+        tokenBalance: updatedTokenBalance,
+        totalUsdValue: updatedtotalUsdValue,
+      };
+    }
+    console.log(unifiedBalances, "unifiedBalances");
+
+    // Then, add any missing tokens from unifiedBalances for this chain
+    for (const bal of unifiedBalances) {
+      for (const asset of bal.breakdown || []) {
+        if (String(asset.chain.id) !== chainKey) continue;
+        const addr = String(asset.contractAddress || "").toLowerCase();
+        // Skip if already in response
+        if (
+          Object.values(updatedResponse[chainKey]).some(
+            (t: any) => String(t.contractAddress || "").toLowerCase() === addr
+          )
+        )
+          continue;
+
+        // Add new token
+        updatedResponse[chainKey][addr] = {
+          contractAddress: asset.contractAddress,
+          name: bal.symbol,
+          symbol: bal.symbol,
+          decimals: asset.decimals,
+          tokenBalance: new Decimal(bal.balance || 0)
+            .mul(Decimal.pow(10, asset.decimals ?? 18))
+            .floor()
+            .toFixed(),
+          totalUsdValue: new Decimal(bal.balanceInFiat || 0).toNumber(),
+          price: asset.price || 1,
+          chainId: String(asset.chain.id),
+          logo: asset?.chain?.logo || "",
+        };
+      }
+    }
+  }
+
+  return updatedResponse;
+}
+
 function injectNetworkInterceptor() {
   const originalFetch = window.fetch;
 
@@ -36,6 +130,34 @@ function injectNetworkInterceptor() {
     }
 
     const response = await originalFetch.apply(this, args);
+
+    if (args[0].toString().startsWith("https://api.fun.xyz/v1/assets")) {
+      const responseData = await response.clone().json();
+      console.log(responseData, "responseData");
+      const isSimpleArrayFormat = Object.values(responseData).every((val) =>
+        Array.isArray(val)
+      );
+
+      if (isSimpleArrayFormat) {
+        return response;
+      }
+
+      const unifiedBalances = await fetchUnifiedBalances();
+      const modifiedResponse = updateTokenBalances(
+        responseData,
+        unifiedBalances
+      );
+      console.log(modifiedResponse, "modifiedResponse");
+
+      const headers = new Headers(response.headers);
+      headers.set("content-type", "application/json;charset=utf-8");
+
+      return new Response(JSON.stringify(modifiedResponse), {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
 
     if (args[1] && args[1].body) {
       const requestBody = args[1].body as any;
@@ -60,6 +182,50 @@ function injectNetworkInterceptor() {
           const item = payload[i];
 
           if (
+            item.method === "eth_call" &&
+            item.params?.[0] &&
+            item.params?.[0].data.toLowerCase().startsWith("0x70a08231")
+          ) {
+            const unifiedBalances = await fetchUnifiedBalances();
+            const token = String(item.params[0]?.to).toLowerCase();
+            const decodedParam = decodeFunctionData({
+              abi: MulticallAbi,
+              data: item.params[0].data,
+            });
+
+            if (decodedParam.functionName === "balanceOf") {
+              const index = unifiedBalances.findIndex((bal) => {
+                return bal.breakdown.some(
+                  (asset) => asset.contractAddress.toLowerCase() === token
+                );
+              });
+
+              const asset = unifiedBalances[index];
+
+              const actualAsset = asset.breakdown.find(
+                (acAsset) => acAsset.contractAddress.toLowerCase() === token
+              );
+
+              const data = encodeFunctionResult({
+                abi: MulticallAbi,
+                functionName: "balanceOf",
+                result: BigInt(
+                  new Decimal(asset.balance)
+                    .mul(
+                      Decimal.pow(10, actualAsset!.decimals || asset.decimals)
+                    )
+                    .floor()
+                    .toFixed()
+                ),
+              });
+
+              responses.push({
+                jsonrpc: "2.0",
+                id: item.id,
+                result: data,
+              });
+            }
+          } else if (
             item.method === "eth_call" &&
             item.params?.[0] &&
             (item.params[0].to?.toLowerCase() === MulticallAddress ||

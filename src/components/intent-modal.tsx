@@ -53,7 +53,7 @@ const modalStyle: React.CSSProperties = {
   color: "#e5e7eb",
   padding: "24px",
   position: "relative",
-  background: "rgb(0 0 0 / 80%)",
+  background: "rgb(30 38 43)",
   boxShadow: "rgba(0, 0, 0, 0.7) 0px 0px 22px 0px",
   border: "1px solid rgb(39, 48, 53)",
   borderRadius: 16,
@@ -70,11 +70,12 @@ const modalStyle: React.CSSProperties = {
 };
 
 const sectionStyle: React.CSSProperties = {
-  background: "rgb(0 0 0 / 80%)",
+  background: "#2A3134",
   width: "100%",
   padding: 0,
   fontFamily:
     "Inter, system-ui, 'Segoe UI', Roboto, Ubuntu, 'Helvetica Neue', sans-serif",
+  borderRadius: "11px",
 };
 
 const btnBase: React.CSSProperties = {
@@ -100,8 +101,8 @@ const btnBase: React.CSSProperties = {
 
 const btnStylePrimary: React.CSSProperties = {
   ...btnBase,
-  backgroundColor: "rgba(3, 55, 255, .8)",
-  boxShadow: "0 0 12px 0 #3556d5",
+  backgroundColor: "rgb(115 228 194 / 80%)",
+  boxShadow: "0 0 12px 0 rgb(78 239 191 / 80%)",
   color: "#fff",
 };
 
@@ -605,7 +606,7 @@ export default function IntentModal({
     const intervalId = setInterval(async () => {
       try {
         setIsRefreshing(true);
-        const refreshedIntent = await intentModal.refresh([]);
+        const refreshedIntent = await intentModal.refresh();
         // Update the intent in the modal state
         setIntentModal({
           ...intentModal,

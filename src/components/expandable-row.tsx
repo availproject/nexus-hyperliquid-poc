@@ -116,6 +116,7 @@ function ExpandableRow({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
+          padding: "12px",
         }}
       >
         <span
@@ -152,7 +153,7 @@ function ExpandableRow({
             style={{
               background: "none",
               border: "none",
-              color: "rgba(3, 55, 255, .8)",
+              color: "rgb(115 228 194 / 80%)",
               fontSize: 12,
               fontWeight: 500,
               cursor: "pointer",

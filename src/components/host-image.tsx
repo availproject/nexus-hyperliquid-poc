@@ -3,6 +3,7 @@ import hypurrFiLogo from "../assets/logo/hypurrFi.svg";
 import liminalLogo from "../assets/logo/liminal.svg";
 import asterDexLogo from "../assets/logo/asterDex.svg";
 import storyHuntLogo from "../assets/logo/storyHunt.svg";
+import polyMarketLogo from "../assets/logo/polymarket.svg";
 
 const DEFAULT_MAPPING: Record<string, string> = {
   "app.hypurr.fi": hypurrFiLogo,
@@ -12,6 +13,7 @@ const DEFAULT_MAPPING: Record<string, string> = {
   "liminal.money": liminalLogo,
   "asterdex.com": asterDexLogo,
   "app.storyhunt.xyz": storyHuntLogo,
+  "polymarket.com": polyMarketLogo,
 };
 
 const STYLE_MAPPING: Record<string, React.CSSProperties> = {
@@ -50,6 +52,7 @@ const STYLE_MAPPING: Record<string, React.CSSProperties> = {
     marginRight: -35,
     marginTop: 10,
   },
+  "polymarket.com": { height: 32, width: 70, marginLeft: -25 },
 };
 
 const HostImage: React.FC = () => {

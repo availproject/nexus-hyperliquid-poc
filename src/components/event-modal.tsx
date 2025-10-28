@@ -52,7 +52,7 @@ const modalStyle: React.CSSProperties = {
   color: "#e5e7eb",
   padding: "24px",
   position: "relative",
-  background: "rgb(0 0 0 / 80%)",
+  background: "rgb(30 38 43)",
   boxShadow: "rgba(0, 0, 0, 0.7) 0px 0px 22px 0px",
   border: "1px solid rgb(39, 48, 53)",
   borderRadius: 16,
@@ -270,7 +270,7 @@ const IntentTransaction: React.FC<NexusStepsProps> = ({
                 style={{
                   color:
                     step.done || txURL
-                      ? "rgba(3, 55, 255, .8)"
+                      ? "rgb(115 228 194 / 80%)"
                       : "rgb(148, 158, 156)",
                   display: "flex",
                   alignItems: "center",

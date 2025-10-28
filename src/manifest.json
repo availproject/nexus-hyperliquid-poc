@@ -29,7 +29,8 @@
         "https://liminal.money/*",
         "https://www.usefelix.xyz/*",
         "https://www.asterdex.com/*",
-        "https://app.storyhunt.xyz/*"
+        "https://app.storyhunt.xyz/*",
+        "https://polymarket.com/*"
       ],
       "run_at": "document_start"
     }
@@ -51,7 +52,8 @@
         "https://liminal.money/*",
         "https://www.usefelix.xyz/*",
         "https://www.asterdex.com/*",
-        "https://app.storyhunt.xyz/*"
+        "https://app.storyhunt.xyz/*",
+        "https://polymarket.com/*"
       ]
     }
   ],

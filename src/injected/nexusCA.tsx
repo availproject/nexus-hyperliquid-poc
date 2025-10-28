@@ -84,7 +84,7 @@ type Step = {
 };
 
 const NexusApp = () => {
-  const ca = new NexusSDK({ network: "devnet" });
+  const ca = new NexusSDK();
   const [intent, setIntent] = useState<OnIntentHookData | null>(null);
   const [allowance, setAllowance] = useState<OnAllowanceHookData | null>(null);
   const [steps, setSteps] = useState<Step[]>([]);
@@ -409,6 +409,7 @@ const NexusApp = () => {
           method: string;
           params?: any[];
         };
+        console.log(method, params, "txPianenjjj");
 
         if (
           method === "eth_sendTransaction" &&
@@ -900,6 +901,82 @@ const NexusApp = () => {
                   throw errorMessage;
                 }
                 return originalRequest.apply(this, args);
+              }
+            }
+          }
+
+          if (window.origin === "https://polymarket.com") {
+            const unifiedBalances = await fetchUnifiedBalances();
+            unifiedBalancesRef.current = unifiedBalances;
+            const decodedData = decodeFunctionData({
+              abi: erc20Abi,
+              data: params[0].data,
+            });
+            console.log(decodedData, "decodedData");
+
+            if (decodedData && decodedData?.args && params[0]?.to) {
+              const tokenAddress = String(params[0]?.to).toLowerCase();
+              const tokenIndex = unifiedBalances.findIndex((bal) =>
+                bal.breakdown.find(
+                  (token) =>
+                    token.contractAddress.toLowerCase() === tokenAddress
+                )
+              );
+              console.log(tokenIndex, "tokenIndex");
+
+              if (tokenIndex === -1) {
+                return originalRequest.apply(this, args);
+              }
+              const actualToken = unifiedBalances[tokenIndex].breakdown.find(
+                (token) => token.contractAddress.toLowerCase() === tokenAddress
+              );
+              const paramAmount = decodedData?.args?.[1] as bigint;
+              console.log(paramAmount, "paramAmount");
+
+              if (
+                new Decimal(actualToken?.balance || "0")
+                  .mul(Decimal.pow(10, actualToken?.decimals || 0))
+                  .lessThan(paramAmount)
+              ) {
+                const requiredAmount = new Decimal(paramAmount)
+                  .minus(
+                    Decimal.mul(
+                      actualToken?.balance || "0",
+                      Decimal.pow(10, actualToken?.decimals || 0)
+                    )
+                  )
+                  .div(Decimal.pow(10, actualToken?.decimals || 0))
+                  .toFixed();
+                console.log(requiredAmount, "requiredAmount");
+
+                requiredAmountRef.current = formatDecimalAmount(requiredAmount);
+                const chainIdHex = await window.ethereum.request({
+                  method: "eth_chainId",
+                });
+                const chainId = parseInt(String(chainIdHex), 16);
+                chainIdRef.current = chainId;
+                console.log(chainId, "chainId");
+
+                const handler = await ca.bridge({
+                  amount: requiredAmount,
+                  token: TOKEN_MAPPING[chainId][tokenAddress.toLowerCase()]
+                    .symbol as SUPPORTED_TOKENS,
+                  chainId: chainId as SUPPORTED_CHAINS_IDS,
+                });
+                console.log("BRIDGE Response", handler);
+                if (!handler.success) {
+                  const errorMessage = {
+                    code: 4001,
+                    message: "User rejected the request.",
+                    details: "User denied intent.",
+                    version: "viem@2.33.3",
+                  };
+                  setError(true);
+                  throw errorMessage;
+                }
+                const hashResponse = await originalRequest.apply(this, args);
+                setTxURL(hashResponse as string);
+                return hashResponse;
               }
             }
           }
